@@ -5,6 +5,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import torch
+
+from sklearn.metrics import explained_variance_score
 
 
 def load_it_data(path_to_data):
@@ -101,25 +104,6 @@ def classes_to_int(objects):
     return objects_int
 
 
-def compute_corr(true_vals, preds, divide = False):
-    """ Returns the overall correlation between real and predicted values in case the 
-    number of neurons under study is 168.
-    
-    Args:
-        true_vals (array of float):  true values 
-        output_folder (array of float): pred values
-
-    Returns:
-        overall correlation coefficient
-    """
-    if divide:
-        corr = np.diag(np.corrcoef(true_vals, preds, rowvar = False)[:168, 168:])
-    else:
-        corr = np.mean(np.diag(np.corrcoef(true_vals, preds, rowvar = False)[:168, 168:]))
-    
-    return corr
-
-
 def load_pickle_dict(file_path):
     """ Load the pkl dictionary into memory
     
@@ -133,3 +117,75 @@ def load_pickle_dict(file_path):
     with open(file_path, "rb") as f:
         file = pickle.load(f)
     return file
+
+
+def compute_corr(true_vals, preds, divide=False):
+    """
+    Compute the correlation between true and predicted values.
+
+    Args:
+        true_vals (numpy array): Ground truth values.
+        preds (numpy array): Predicted values.
+        divide (bool): If True, compute correlation per neuron.
+
+    Returns:
+        numpy array or float: Correlation values.
+    """
+    true_vals = np.array(true_vals)
+    preds = np.array(preds)
+
+    if divide:
+        correlations = []
+        for i in range(true_vals.shape[1]):
+            std_true = np.std(true_vals[:, i])
+            std_pred = np.std(preds[:, i])
+            if std_true == 0 or std_pred == 0:
+                correlations.append(np.nan)  # Skip neurons with zero std
+            else:
+                corr = np.corrcoef(true_vals[:, i], preds[:, i])[0, 1]
+                correlations.append(corr)
+        return np.array(correlations)
+    else:
+        valid_neurons = []
+        for i in range(true_vals.shape[1]):
+            std_true = np.std(true_vals[:, i])
+            std_pred = np.std(preds[:, i])
+            if std_true != 0 and std_pred != 0:
+                valid_neurons.append(i)
+        if len(valid_neurons) == 0:
+            raise ValueError("No valid neurons with non-zero standard deviation.")
+        valid_corr = np.corrcoef(true_vals[:, valid_neurons], preds[:, valid_neurons], rowvar=False)
+        return np.mean(np.diag(valid_corr[:len(valid_neurons), len(valid_neurons):]))
+
+
+def compute_ev_and_corr(model, dataloader, spikes_val):
+    """
+    Compute explained variance and correlation for the model predictions.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+
+    Returns:
+        tuple: Overall explained variance and correlation.
+    """
+    model.eval()
+    val_preds = []
+
+    with torch.no_grad():
+        for inputs, _ in dataloader:
+            outputs = model(inputs)
+            val_preds.append(outputs.cpu().numpy())
+
+    val_preds = np.concatenate(val_preds, axis=0)
+
+    # Compute explained variance
+    ev = explained_variance_score(spikes_val, val_preds, multioutput='raw_values')
+    overall_ev = np.mean(ev)
+
+    # Compute correlation
+    corr = compute_corr(spikes_val, val_preds, divide=True)
+    overall_corr = compute_corr(spikes_val, val_preds)
+
+    return overall_ev, overall_corr, ev, corr
