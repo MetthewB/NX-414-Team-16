@@ -37,5 +37,7 @@ Intermediate conclusion: pretrained weights of existing models seem to give real
 
 Second, I look into training the models with two obectives. I chose ResNet50 as the model to train on and I used pretrained weights, motivated by the results of the first part (it seems that finetuning pretrained weights is the most promising so far). One objective is the same objective with the MSELoss. The other objective is the prediction of the labels of the images with the CrossEntropyLoss. In my first training the importance of both objectives is the same and it leads to worst results than simply finetuning. My hypothesis was then that the more we also try to learn the labels, the worst the model becomes to predict neural activity. To test my hypothesis, I trained a model for which the weight that takes the neural activity objective is more than three time bigger than the label objective. This valided my hypothesis: the results were in-between predicting only the neural activity and the balanced version of training with two objectives. 
 
+Update: I also try to train on bionjective without using the pretrained weigts. This leads to worst performance: var=0.0968 / corr=0.3020. I didn't include this neither to not pollute the table/the code.
+
 Intermediate conclusion: Using two objectives, with one trying to predict the labels, doesn't help the model. It has the oposit effect, namely: the more we try to train on the labels, the worst the model becomes.
 
