@@ -8,6 +8,7 @@ import pickle
 import torch
 
 from sklearn.metrics import explained_variance_score
+from torch.optim.lr_scheduler import StepLR
 
 
 def load_it_data(path_to_data):
@@ -189,3 +190,114 @@ def compute_ev_and_corr(model, dataloader, spikes_val):
     overall_corr = compute_corr(spikes_val, val_preds)
 
     return overall_ev, overall_corr, ev, corr
+
+
+
+def train_model(model, train_dataloader, val_dataloader, loss_function, optimizer, epochs=10, device='cpu', scheduler=None):
+    """
+    Train the model and validate it after each epoch.
+
+    Args:
+        model (nn.Module): The neural network model.
+        train_dataloader (DataLoader): DataLoader for training data.
+        val_dataloader (DataLoader): DataLoader for validation data.
+        loss_function (nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer for training.
+        epochs (int): Number of training epochs.
+
+    Returns:
+        None
+    """
+    model.to(device)
+
+    # Learning rate scheduler
+    if scheduler is None:
+        # Use StepLR scheduler with step size of 5 and gamma of 0.1
+        scheduler = StepLR(optimizer, step_size=5, gamma=0.1)
+
+    for epoch in range(epochs):
+        # Training phase
+        model.train()
+        train_loss = 0.0
+        for images, spikes in train_dataloader:
+            images, spikes = images.to(device), spikes.to(device)
+
+            # Forward pass
+            outputs = model(images)
+            loss = loss_function(outputs, spikes)
+
+            # Backward pass & optimization
+            optimizer.zero_grad()
+            loss.backward()
+
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+            optimizer.step()
+
+            train_loss += loss.item()
+
+        # Validation phase
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for images, spikes in val_dataloader:
+                images, spikes = images.to(device), spikes.to(device)
+
+                # Forward pass
+                outputs = model(images)
+                loss = loss_function(outputs, spikes)
+
+                val_loss += loss.item()
+
+        # Step the learning rate scheduler
+        scheduler.step()
+
+        # Print epoch results
+        print(f"Epoch {epoch+1}/{epochs}, Train Loss: {train_loss/len(train_dataloader):.4f}, "
+              f"Val Loss: {val_loss/len(val_dataloader):.4f}")
+
+        # Stop training if loss becomes NaN or Inf
+        if torch.isnan(torch.tensor(train_loss)) or torch.isinf(torch.tensor(train_loss)):
+            print("Training stopped due to unstable loss (NaN or Inf).")
+            break
+
+
+def evaluate_model(model, dataloader, spikes_val, device='cpu'):
+    """
+    Evaluate the model using explained variance and correlation.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+        loss_function (nn.Module, optional): Loss function (if needed for logging).
+        device (str): Device to evaluate on ('cpu' or 'cuda').
+
+    Returns:
+        None
+    """
+    model.to(device)
+    model.eval()
+
+    # Compute explained variance & correlation
+    overall_ev, overall_corr, ev_per_neuron, corr_per_neuron = compute_ev_and_corr(model, dataloader, spikes_val)
+
+    print(f'Overall explained variance: {overall_ev:.4f}')
+    print(f'Overall correlation: {overall_corr:.4f}')
+
+    # Plot histograms for explained variance & correlation
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].hist(ev_per_neuron, bins=20, color='blue', alpha=0.7, edgecolor='black')
+    axs[0].set_title('Explained Variance per Neuron')
+    axs[0].set_xlabel('Explained Variance')
+    axs[0].set_ylabel('Frequency')
+
+    axs[1].hist(corr_per_neuron, bins=20, color='green', alpha=0.7, edgecolor='black')
+    axs[1].set_title('Correlation per Neuron')
+    axs[1].set_xlabel('Correlation Coefficient')
+    axs[1].set_ylabel('Frequency')
+
+    plt.tight_layout()
+    plt.show()
