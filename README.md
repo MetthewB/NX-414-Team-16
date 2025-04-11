@@ -16,6 +16,8 @@ same + dropout=0.2      var=0.0649 / corr=0.2548
 
 same + dropout=0.2 + L2 var=0.2015 / corr=0.4510
 
+same + add layer->model var=0.2044 / corr=0.4574
+
 ------------Finetune existing model-------------
 
 Finetune ResNet:        var=0.4467 / corr=0.6560
@@ -35,7 +37,7 @@ Biobj ResNet (0.3 lab): var=0.2984 / corr=0.5346
 
 Here is what I did and the decisions I took: 
 
-First, I tried to improve the shallowCNN model. I tried to modify the normalization, the dropout, the scheduler and add a weight decay. Here is the logical chain-of-thoughts I used.
+First, I tried to improve the shallowCNN model. I tried to modify the normalization, the dropout, the scheduler and add a weight decay. Here is the logical chain-of-thoughts I used. First; I thought that using the mean and variance of the data instead of the one from ResNet could be beneficial. Hence I modified this. But with the new normalization, the model was not learning fast enough: I had to change the scheduler. It worked well. Next, I tried to modify the dropout to 0.2 thinking that it would help the model to be more expressive. It didn't work well. But this combined with L2 normalization was beneficial. Finally, I concluded that it would be hard to improve hyperparameters more, so I updated the model to add one convolutional layer. It lead to some little improvement. I concluded that making the model more expressive was beneficial, hence the next section. 
 
 ----------------------------------------------
 
