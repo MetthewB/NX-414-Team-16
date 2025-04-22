@@ -263,7 +263,129 @@ def train_model(model, train_dataloader, val_dataloader, loss_function, optimize
             break
 
 
-def evaluate_model(model, dataloader, spikes_val, device='cpu'):
+def evaluate_model(model, dataloader, spikes_val, device='cpu', prev_model=None, prev_dataloader=None):
+    """
+    Evaluate the model (and optionally a previous model) using explained variance and correlation.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+        device (str): Device to evaluate on ('cpu' or 'cuda').
+        prev_model (nn.Module, optional): A previous model for comparison.
+
+    Returns:
+        None
+    """
+    model.to(device)
+    model.eval()
+
+    overall_ev, overall_corr, ev_per_neuron, corr_per_neuron = compute_ev_and_corr(model, dataloader, spikes_val)
+
+    print(f'[Current Model] Overall explained variance: {overall_ev:.4f}')
+    print(f'[Current Model] Overall correlation: {overall_corr:.4f}')
+
+    # If previous model is provided, evaluate it too
+    if prev_model is not None:
+        prev_model.to(device)
+        prev_model.eval()
+
+        prev_ev, prev_corr, prev_ev_per_neuron, prev_corr_per_neuron = compute_ev_and_corr(prev_model, prev_dataloader, spikes_val)
+
+        print(f'[Previous Model] Overall explained variance: {prev_ev:.4f}')
+        print(f'[Previous Model] Overall correlation: {prev_corr:.4f}')
+    else:
+        prev_ev_per_neuron, prev_corr_per_neuron = None, None
+
+    # Plot histograms for explained variance & correlation
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].hist(ev_per_neuron, bins=20, alpha=0.6, label='Current Model', color='blue', edgecolor='black')
+    if prev_ev_per_neuron is not None:
+        axs[0].hist(prev_ev_per_neuron, bins=20, alpha=0.6, label='Previous Model', color='red', edgecolor='black')
+    axs[0].set_title('Explained Variance per Neuron')
+    axs[0].set_xlabel('Explained Variance')
+    axs[0].set_ylabel('Frequency')
+    axs[0].legend()
+
+    axs[1].hist(corr_per_neuron, bins=20, alpha=0.6, label='Current Model', color='green', edgecolor='black')
+    if prev_corr_per_neuron is not None:
+        axs[1].hist(prev_corr_per_neuron, bins=20, alpha=0.6, label='Previous Model', color='red', edgecolor='black')
+    axs[1].set_title('Correlation per Neuron')
+    axs[1].set_xlabel('Correlation Coefficient')
+    axs[1].set_ylabel('Frequency')
+    axs[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def evaluate_model_main_comp(model, dataloader, spikes_val, device, 
+                             prev_model, prev_dataloader, first_model, first_dataloader):
+    """
+    Evaluate the model (and optionally a previous model) using explained variance and correlation.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+        device (str): Device to evaluate on ('cpu' or 'cuda').
+        prev_model (nn.Module, optional): A previous model for comparison.
+
+    Returns:
+        None
+    """
+    model.to(device)
+    model.eval()
+    prev_model.to(device)
+    prev_model.eval()
+    first_model.to(device)
+    first_model.eval()
+    
+
+    overall_ev, overall_corr, ev_per_neuron, corr_per_neuron = compute_ev_and_corr(model, dataloader, spikes_val)
+
+    print(f'[Current Model] Overall explained variance: {overall_ev:.4f}')
+    print(f'[Current Model] Overall correlation: {overall_corr:.4f}')
+
+    prev_ev, prev_corr, prev_ev_per_neuron, prev_corr_per_neuron = compute_ev_and_corr(prev_model, prev_dataloader, spikes_val)
+
+    print(f'[Previous Model] Overall explained variance: {prev_ev:.4f}')
+    print(f'[Previous Model] Overall correlation: {prev_corr:.4f}')
+
+    first_ev, first_corr, first_ev_per_neuron, first_corr_per_neuron = compute_ev_and_corr(first_model, first_dataloader, spikes_val)
+
+    print(f'[First Model] Overall explained variance: {first_ev:.4f}')
+    print(f'[First Model] Overall correlation: {first_corr:.4f}')
+
+    # Plot histograms for explained variance & correlation
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].hist(ev_per_neuron, bins=20, alpha=0.6, label='efficientnet_b5', color='blue', edgecolor='black')
+    # Previous model
+    axs[0].hist(prev_ev_per_neuron, bins=20, alpha=0.6, label='resnet50', color='red', edgecolor='black')
+    # First model
+    axs[0].hist(first_ev_per_neuron, bins=20, alpha=0.6, label='deeper_cnn', color='orange', edgecolor='black')
+
+    axs[0].set_title('Explained Variance per Neuron')
+    axs[0].set_xlabel('Explained Variance')
+    axs[0].set_ylabel('Frequency')
+    axs[0].legend()
+
+    axs[1].hist(corr_per_neuron, bins=20, alpha=0.6, label='efficientnet_b5', color='blue', edgecolor='black')
+    # Previous model
+    axs[1].hist(prev_corr_per_neuron, bins=20, alpha=0.6, label='resnet50', color='red', edgecolor='black')
+    # First model
+    axs[1].hist(first_corr_per_neuron, bins=20, alpha=0.6, label='deeper_cnn', color='orange', edgecolor='black')
+    axs[1].set_title('Correlation per Neuron')
+    axs[1].set_xlabel('Correlation Coefficient')
+    axs[1].set_ylabel('Frequency')
+    axs[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def evaluate_model_bi(model_1, dataloader, spikes_val, device, model_2, resnet, res_dataloader):
     """
     Evaluate the model using explained variance and correlation.
 
@@ -277,27 +399,185 @@ def evaluate_model(model, dataloader, spikes_val, device='cpu'):
     Returns:
         None
     """
-    model.to(device)
-    model.eval()
+    model_1.to(device)
+    model_1.eval()
+    model_2.to(device)
+    model_2.eval()
+    resnet.to(device)
+    resnet.eval()
 
     # Compute explained variance & correlation
-    overall_ev, overall_corr, ev_per_neuron, corr_per_neuron = compute_ev_and_corr(model, dataloader, spikes_val)
+    overall_ev_1, overall_corr_1, ev_per_neuron_1, corr_per_neuron_1 = compute_ev_and_corr_biobj(model_1, dataloader, spikes_val)
+    overall_ev_2, overall_corr_2, ev_per_neuron_2, corr_per_neuron_2 = compute_ev_and_corr_biobj(model_2, dataloader, spikes_val)
+    resnet_ev, resnet_corr, resnet_ev_per_neuron, resnet_corr_per_neuron = compute_ev_and_corr(resnet, res_dataloader, spikes_val)
 
-    print(f'Overall explained variance: {overall_ev:.4f}')
-    print(f'Overall correlation: {overall_corr:.4f}')
+    print(f'Overall explained variance biobjective weight 1: {overall_ev_2:.4f}')
+    print(f'Overall correlation biobjective weight 1: {overall_corr_2:.4f}')
+
+    print(f'Overall explained variance biobjective weight 0.3: {overall_ev_1:.4f}')
+    print(f'Overall correlation biobjective weight 0.3: {overall_corr_1:.4f}')
+
+    print(f'Overall explained variance resnet: {resnet_ev:.4f}')
+    print(f'Overall correlation resnet: {resnet_corr:.4f}')
 
     # Plot histograms for explained variance & correlation
     fig, axs = plt.subplots(1, 2, figsize=(12, 5))
 
-    axs[0].hist(ev_per_neuron, bins=20, color='blue', alpha=0.7, edgecolor='black')
+    axs[0].hist(ev_per_neuron_1, bins=20, color='blue', label='Biobjective 0.3', alpha=0.6, edgecolor='black')
+    axs[0].hist(ev_per_neuron_2, bins=20, color='orange', label='Biobjective 1', alpha=0.6, edgecolor='black')
+    axs[0].hist(resnet_ev_per_neuron, bins=20, alpha=0.6, label='efficientnet_b5', color='red', edgecolor='black')
     axs[0].set_title('Explained Variance per Neuron')
     axs[0].set_xlabel('Explained Variance')
     axs[0].set_ylabel('Frequency')
+    axs[0].legend()
 
-    axs[1].hist(corr_per_neuron, bins=20, color='green', alpha=0.7, edgecolor='black')
+    axs[1].hist(corr_per_neuron_1, bins=20, color='blue', label='Biobjective 0.3', alpha=0.6, edgecolor='black')
+    axs[1].hist(corr_per_neuron_2, bins=20, color='orange', label='Biobjective 1', alpha=0.6, edgecolor='black')
+    axs[1].hist(resnet_corr_per_neuron, bins=20, alpha=0.6, label='efficientnetB5', color='red', edgecolor='black')
     axs[1].set_title('Correlation per Neuron')
     axs[1].set_xlabel('Correlation Coefficient')
     axs[1].set_ylabel('Frequency')
+    axs[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def train_model_biobj(model, train_dataloader, val_dataloader, criterion_activity, criterion_label, coef_label, optimizer, epochs=10, device='cpu'):
+    """
+    Train the model and validate it after each epoch.
+
+    Args:
+        model (nn.Module): The neural network model.
+        train_dataloader (DataLoader): DataLoader for training data.
+        val_dataloader (DataLoader): DataLoader for validation data.
+        loss_function (nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer for training.
+        epochs (int): Number of training epochs.
+
+    Returns:
+        None
+    """
+    model.to(device)
+
+    # Learning rate scheduler
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.1)
+
+    for epoch in range(epochs):
+        # Training phase
+        model.train()
+        train_loss = 0.0
+        for images, spikes, objects in train_dataloader:
+            images, spikes, objects = images.to(device), spikes.to(device), objects.to(device)
+
+            optimizer.zero_grad()
+            # Forward pass
+            activity_output, label_output = model(images)
+
+            loss_activity = criterion_activity(activity_output, spikes)
+            loss_label = criterion_label(label_output, objects)
+
+            loss = loss_activity + (coef_label*loss_label)
+
+            # Backward pass & optimization
+            loss.backward()
+
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+            optimizer.step()
+
+            train_loss += loss.item()
+
+        # Validation phase
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for images, spikes, objects in val_dataloader:
+                images, spikes, objects = images.to(device), spikes.to(device), objects.to(device)
+
+                # Forward pass
+                activity_output, label_output = model(images)
+                loss_activity = criterion_activity(activity_output, spikes)
+                loss_label = criterion_label(label_output, objects)
+
+                loss = loss_activity + (coef_label*loss_label)
+
+                val_loss += loss.item()
+
+        # Step the learning rate scheduler
+        scheduler.step()
+
+        # Print epoch results
+        print(f"Epoch {epoch+1}/{epochs}, Train Loss: {train_loss/len(train_dataloader):.4f}, "
+              f"Val Loss: {val_loss/len(val_dataloader):.4f}")
+
+        # Stop training if loss becomes NaN or Inf
+        if torch.isnan(torch.tensor(train_loss)) or torch.isinf(torch.tensor(train_loss)):
+            print("Training stopped due to unstable loss (NaN or Inf).")
+            break
+
+
+def evaluate_model_main_comp(model, dataloader, spikes_val, device,
+                             prev_model, prev_dataloader, first_model, first_dataloader):
+    """
+    Evaluate the model (and optionally a previous model) using explained variance and correlation.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+        device (str): Device to evaluate on ('cpu' or 'cuda').
+        prev_model (nn.Module, optional): A previous model for comparison.
+
+    Returns:
+        None
+    """
+    model.to(device)
+    model.eval()
+    prev_model.to(device)
+    prev_model.eval()
+    first_model.to(device)
+    first_model.eval()
+
+
+    overall_ev, overall_corr, ev_per_neuron, corr_per_neuron = compute_ev_and_corr(model, dataloader, spikes_val)
+
+    print(f'[Current Model] Overall explained variance: {overall_ev:.4f}')
+    print(f'[Current Model] Overall correlation: {overall_corr:.4f}')
+
+    prev_ev, prev_corr, prev_ev_per_neuron, prev_corr_per_neuron = compute_ev_and_corr(prev_model, prev_dataloader, spikes_val)
+
+    print(f'[Previous Model] Overall explained variance: {prev_ev:.4f}')
+    print(f'[Previous Model] Overall correlation: {prev_corr:.4f}')
+
+    first_ev, first_corr, first_ev_per_neuron, first_corr_per_neuron = compute_ev_and_corr(first_model, first_dataloader, spikes_val)
+
+    print(f'[First Model] Overall explained variance: {first_ev:.4f}')
+    print(f'[First Model] Overall correlation: {first_corr:.4f}')
+
+    # Plot histograms for explained variance & correlation
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].hist(ev_per_neuron, bins=20, alpha=0.6, label='efficientnet_b5', color='blue', edgecolor='black')
+    # Previous model
+    axs[0].hist(prev_ev_per_neuron, bins=20, alpha=0.6, label='resnet50', color='red', edgecolor='black')
+    # First model
+    axs[0].hist(first_ev_per_neuron, bins=20, alpha=0.6, label='deeper_cnn', color='orange', edgecolor='black')
+
+    axs[0].set_title('Explained Variance per Neuron')
+    axs[0].set_xlabel('Explained Variance')
+    axs[0].set_ylabel('Frequency')
+    axs[0].legend()
+
+    axs[1].hist(corr_per_neuron, bins=20, alpha=0.6, label='efficientnet_b5', color='blue', edgecolor='black')
+    # Previous model
+    axs[1].hist(prev_corr_per_neuron, bins=20, alpha=0.6, label='resnet50', color='red', edgecolor='black')
+    # First model
+    axs[1].hist(first_corr_per_neuron, bins=20, alpha=0.6, label='deeper_cnn', color='orange', edgecolor='black')
+    axs[1].set_title('Correlation per Neuron')
+    axs[1].set_xlabel('Correlation Coefficient')
+    axs[1].set_ylabel('Frequency')
+    axs[1].legend()
 
     plt.tight_layout()
     plt.show()
