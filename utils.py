@@ -192,7 +192,6 @@ def compute_ev_and_corr(model, dataloader, spikes_val):
     return overall_ev, overall_corr, ev, corr
 
 
-
 def train_model(model, train_dataloader, val_dataloader, loss_function, optimizer, epochs=10, device='cpu', scheduler=None):
     """
     Train the model and validate it after each epoch.
@@ -385,6 +384,7 @@ def evaluate_model_main_comp(model, dataloader, spikes_val, device,
     plt.tight_layout()
     plt.show()
 
+
 def evaluate_model_bi(model_1, dataloader, spikes_val, device, model_2, resnet, res_dataloader):
     """
     Evaluate the model using explained variance and correlation.
@@ -441,6 +441,7 @@ def evaluate_model_bi(model_1, dataloader, spikes_val, device, model_2, resnet, 
 
     plt.tight_layout()
     plt.show()
+
 
 def train_model_biobj(model, train_dataloader, val_dataloader, criterion_activity, criterion_label, coef_label, optimizer, epochs=10, device='cpu'):
     """
