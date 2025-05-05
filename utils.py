@@ -384,6 +384,37 @@ def evaluate_model_main_comp(model, dataloader, spikes_val, device,
     plt.tight_layout()
     plt.show()
 
+def compute_ev_and_corr_biobj(model, dataloader, spikes_val):
+    """
+    Compute explained variance and correlation for the model predictions.
+
+    Args:
+        model (nn.Module): The trained model.
+        dataloader (DataLoader): DataLoader for the dataset to evaluate.
+        spikes_val (numpy array): Ground truth neural activity for validation.
+
+    Returns:
+        tuple: Overall explained variance and correlation.
+    """
+    model.eval()
+    val_preds = []
+
+    with torch.no_grad():
+        for inputs, _, _ in dataloader:
+            activity_output, _ = model(inputs)
+            val_preds.append(activity_output.cpu().numpy())
+
+    val_preds = np.concatenate(val_preds, axis=0)
+
+    # Compute explained variance
+    ev = explained_variance_score(spikes_val, val_preds, multioutput='raw_values')
+    overall_ev = np.mean(ev)
+
+    # Compute correlation
+    corr = compute_corr(spikes_val, val_preds, divide=True)
+    overall_corr = compute_corr(spikes_val, val_preds)
+
+    return overall_ev, overall_corr, ev, corr
 
 def evaluate_model_bi(model_1, dataloader, spikes_val, device, model_2, resnet, res_dataloader):
     """
