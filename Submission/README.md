@@ -10,6 +10,7 @@ This .zip file contains:
 - code.ipynb: the code for all the models we tried to train to predict the neural activity
 - Report.pdf: the detail of our investigation methods and our findings
 - models/DenseNet201.pth: the weights of our best model. Those are used to produce the results of test.ipynb that evaluates our DenseNet201 model. The model is not in the folder because of the size limit of this folder. It is accessible here: https://drive.google.com/drive/folders/1RMFtDjMh7rq9Nh-BxOjJjslNARcA2nBk?usp=sharing
+- utils.py: the file containing some helper functions for the notebook code.ipynb
 
 Important notes: 
 
