@@ -2,12 +2,14 @@
 Project for the 2025 NX-414 - Brain-like computation and intelligence course
 (Arnault Stähli, Matthieu Beylard-Ozeroff, Francesco Ceccucci)
 
+Please download our DenseNet201 here: https://drive.google.com/drive/folders/1RMFtDjMh7rq9Nh-BxOjJjslNARcA2nBk?usp=sharing
+
 This .zip file contains: 
 
 - test.ipynb: this file is shows the results of our best model
 - code.ipynb: the code for all the models we tried to train to predict the neural activity
 - Report.pdf: the detail of our investigation methods and our findings
-- models/DenseNet201.pth: the weights of our best model. Those are used to produce the results of test.ipynb that evaluates our DenseNet201 model
+- models/DenseNet201.pth: the weights of our best model. Those are used to produce the results of test.ipynb that evaluates our DenseNet201 model. The model is not in the folder because of the size limit of this folder. It is accessible here: https://drive.google.com/drive/folders/1RMFtDjMh7rq9Nh-BxOjJjslNARcA2nBk?usp=sharing
 
 Important notes: 
 
