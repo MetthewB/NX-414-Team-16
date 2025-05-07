@@ -1,6 +1,6 @@
 # NX-414-Team-16
 Project for the 2025 NX-414 - Brain-like computation and intelligence course
-Arnault Stähli, Matthieu Beylard-Ozeroff, Francesco Ceccucci
+(Arnault Stähli, Matthieu Beylard-Ozeroff, Francesco Ceccucci)
 
 This .zip file contains: 
 
